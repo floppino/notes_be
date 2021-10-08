@@ -1,3 +1,98 @@
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret-config
+type: Opaque
+stringData:  # We dont need to worry about converting to base64
+  POSTGRES_USER: niceusr
+  POSTGRES_PASSWORD: nicepwd
+  POSTGRES_DB: notes
+  DB_HOST: postgres-service
+  DB_DRIVER: postgres
+  API_SECRET: 98hbun98h 
+  DB_USER: niceusr
+  DB_PASSWORD: nicepwd
+  DB_NAME: notes
+  DB_PORT: "5432"
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 2Gi
+  accessModes:
+  - ReadWriteOnce
+  hostPath:
+    path: "/mnt/data"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pv-claim
+spec:
+  storageClassName: manual
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      volumes:
+      - name: postgres-pv-storage
+        persistentVolumeClaim:
+          claimName: postgres-pv-claim
+      containers:
+      - name: postgres
+        image: postgres:11
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+        envFrom:
+        - secretRef:
+            name: postgres-secret-config
+        env:
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - mountPath: /var/lib/postgresql/data
+          name: postgres-pv-storage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  name: postgres-service
+spec:
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: postgres
+  type: NodePort
+status:
+  loadBalancer: {}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,6 +111,6 @@ spec:
     spec:
       containers:
       - name: notes
-        image: note:0.1
+        image: note:0.2
         ports:
         - containerPort: 8080

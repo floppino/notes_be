@@ -5,13 +5,13 @@ metadata:
   name: postgres-secret-config
 type: Opaque
 stringData:  # We dont need to worry about converting to base64
-  POSTGRES_USER: niceusr
+  POSTGRES_USER: postgres
   POSTGRES_PASSWORD: nicepwd
   POSTGRES_DB: notes
   DB_HOST: postgres-service
   DB_DRIVER: postgres
   API_SECRET: 98hbun98h 
-  DB_USER: niceusr
+  DB_USER: postgres
   DB_PASSWORD: nicepwd
   DB_NAME: notes
   DB_PORT: "5432"
@@ -111,6 +111,54 @@ spec:
     spec:
       containers:
       - name: notes
-        image: note:0.2
+        image: note:0.3
         ports:
         - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: notes
+  name: notes-service
+spec:
+  ports:
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: notes
+  type: NodePort
+status:
+  loadBalancer: {}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: notes-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: notes-service
+            port:
+              number: 8080
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: base
+spec:
+  containers:
+  - name: base
+    image: postgres:11
+    imagePullPolicy: IfNotPresent
+    command: ["/bin/bash"]
+    args: ["-c", "sleep 9999"]

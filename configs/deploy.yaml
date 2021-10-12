@@ -87,6 +87,7 @@ spec:
   - port: 5432
     protocol: TCP
     targetPort: 5432
+    nodePort: 30078
   selector:
     app: postgres
   type: NodePort
@@ -111,7 +112,7 @@ spec:
     spec:
       containers:
       - name: notes
-        image: note:0.3
+        image: notes:0.1
         ports:
         - containerPort: 8080
 ---
@@ -127,6 +128,7 @@ spec:
   - port: 8080
     protocol: TCP
     targetPort: 8080
+    nodePort: 30079
   selector:
     app: notes
   type: NodePort
